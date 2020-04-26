@@ -13,6 +13,9 @@ namespace ZipCrackNetCore
         private static Int32 ThreadCount = Environment.ProcessorCount;
         private static Int32 MinLength = 0;
         private static Int32 MaxLength = 0;
+        /// <summary>
+        /// The next combination length to test. Has to be increased after a new ZipCrackThread has been created.
+        /// </summary>
         private static Int32 LengthToAssign = 0;
         private static List<Char> Charset = new List<Char>();
         private static String ZipPath = "";
@@ -23,7 +26,7 @@ namespace ZipCrackNetCore
         /// <param name="args">[PATH] [Charset-String] [MIN LENGHT] [MAX LENGTH]</param>
         static void Main(string[] args)
         {
-            if(args.Length != 4)
+            if(args.Length != 4) //All 4 Arguments are needed
             {
                 Console.WriteLine("Wrong use of arguments!");
                 Console.WriteLine("[PATH] [Charset-String] [MIN LENGTH] [MAX LENGTH]");
@@ -31,6 +34,7 @@ namespace ZipCrackNetCore
                 return;
             }
 
+            //Check if the Zip-File actually exists
             ZipPath = args[0];
             System.Diagnostics.Debug.WriteLine("Zip-Path: " + ZipPath);
             if(!File.Exists(ZipPath))
@@ -39,7 +43,7 @@ namespace ZipCrackNetCore
                 return;
             }
 
-
+            //Add the Provided Characters to the List
             Charset.AddRange(args[1].ToCharArray());
             System.Diagnostics.Debug.WriteLine("Charset: " + args[1]);
 
@@ -48,7 +52,7 @@ namespace ZipCrackNetCore
                 MinLength = Convert.ToInt32(args[2]);
                 LengthToAssign = MinLength;
                 System.Diagnostics.Debug.WriteLine("Min Length: " + MinLength.ToString());
-                if (MinLength < 0)
+                if (MinLength < 0) //Password has to be at least 0 characters long
                 {
                     Console.WriteLine("[MIN LENGTH] must be 0 or greater!");
                     return;
@@ -65,12 +69,12 @@ namespace ZipCrackNetCore
             {
                 MaxLength = Convert.ToInt32(args[3]);
                 System.Diagnostics.Debug.WriteLine("Max Length: " + MaxLength.ToString());
-                if (MaxLength < 0)
+                if (MaxLength < 0) //Password has to be at least 0 characters long
                 {
                     Console.WriteLine("[MAX LENGTH] must be 0 or greater!");
                     return;
                 }
-                if(MaxLength < MinLength)
+                if(MaxLength < MinLength) //The maximum length of the password has to be >= the minimum length
                 {
                     Console.WriteLine("[MAX LENGTH] must be [MIN LENGTH] or greater!");
                     return;
@@ -82,15 +86,16 @@ namespace ZipCrackNetCore
                 return;
             }
 
+            //If there are less Password Lengths to test than there are cores available, use the amount of Lengths as the Thread Count instead
             if (MaxLength - MinLength + 1 < ThreadCount) ThreadCount = MaxLength - MinLength + 1;
 
-            TempPath = Path.Combine(Path.GetTempPath(), "zipcracknetcore");
+            TempPath = Path.Combine(Path.GetTempPath(), "zipcracknetcore"); //Temporary Directory to use for the copied ZIPs
             System.Diagnostics.Debug.WriteLine("Temp Path: " + TempPath);
             if (!Directory.Exists(TempPath))
             {
                 try
                 {
-                    Directory.CreateDirectory(TempPath);
+                    Directory.CreateDirectory(TempPath); //Generate the temporary directory if it does not exist
                 }
                 catch
                 {
@@ -101,7 +106,7 @@ namespace ZipCrackNetCore
 
             try
             {
-                foreach (FileInfo file in new DirectoryInfo(TempPath).EnumerateFiles())
+                foreach (FileInfo file in new DirectoryInfo(TempPath).EnumerateFiles()) //Delete existing files in the Temporary directory
                 {
                     System.Diagnostics.Debug.WriteLine("Deleting File: " + file.FullName);
                     file.Delete();
@@ -117,13 +122,13 @@ namespace ZipCrackNetCore
             {
                 try
                 {
-                    File.Copy(ZipPath, Path.Combine(TempPath, i.ToString() + ".zip"));
+                    File.Copy(ZipPath, Path.Combine(TempPath, i.ToString() + ".zip")); //Generate a copy of the ZIP-File for each Thread
                     CancellationTokenSource cts = new CancellationTokenSource();
-                    ZipCrackThread zct = new ZipCrackThread(Charset.ToArray(), LengthToAssign, Path.Combine(TempPath, i.ToString() + ".zip"), cts.Token);
-                    zct.Finished += Zct_Finished;
-                    CancellationTokens.Add(cts);
+                    ZipCrackThread zct = new ZipCrackThread(Charset.ToArray(), LengthToAssign, Path.Combine(TempPath, i.ToString() + ".zip"), cts.Token); //Object used for the Thread
+                    zct.Finished += Zct_Finished; //Callback for when a Thread has finished it's work
+                    CancellationTokens.Add(cts); //Cancellation Tokens need to be safed to properly shut down the program when a password has been found
                     Thread t = new Thread(new ThreadStart(zct.Bruteforce));
-                    t.Start();
+                    t.Start(); //Start the Thread
                     LengthToAssign++;
                     System.Diagnostics.Debug.WriteLine("Copied ZIP: " + Path.Combine(TempPath, i.ToString() + ".zip"));
                 }
@@ -137,7 +142,7 @@ namespace ZipCrackNetCore
             Console.WriteLine("Press key to abort!");
             Console.ReadKey();
             
-            foreach (CancellationTokenSource cts in CancellationTokens)
+            foreach (CancellationTokenSource cts in CancellationTokens) //Get rid of all the Threads when the user presses a key
             {
                 try
                 {
@@ -151,12 +156,17 @@ namespace ZipCrackNetCore
             }
         }
 
+        /// <summary>
+        /// A thread has come to an End without being cancelled
+        /// </summary>
+        /// <param name="sender">The Object containing the Thread-Function</param>
+        /// <param name="e"></param>
         private static void Zct_Finished(object sender, EventArgs e)
         {
             ZipCrackThread zct = (ZipCrackThread)sender;
-            if(zct.Password != null)
+            if(zct.Password != null) //The password has been found
             {
-                foreach(CancellationTokenSource cts in CancellationTokens)
+                foreach(CancellationTokenSource cts in CancellationTokens) //Cancel all the remaining Threads
                 {
                     try
                     {
@@ -168,15 +178,15 @@ namespace ZipCrackNetCore
                         System.Diagnostics.Debug.WriteLine(ex.Message);
                     }
                 }
-                Console.WriteLine("Password: " + zct.Password);
-                Environment.Exit(0);
+                Console.WriteLine("Password: " + zct.Password); //Print out the password
+                Environment.Exit(0); //Exit the program
             }
-            else if(LengthToAssign > MaxLength)
+            else if(LengthToAssign > MaxLength) //The specified maximum password length as been exceeded without a password being found
             {
                 Console.WriteLine("No Password found");
                 Environment.Exit(1);
             }
-            else
+            else //Start a new Thread to try a longer password
             {
                 CancellationTokenSource cts = new CancellationTokenSource();
                 zct = new ZipCrackThread(Charset.ToArray(), LengthToAssign, zct.Filename, cts.Token);
