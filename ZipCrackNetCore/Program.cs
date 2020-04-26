@@ -181,12 +181,7 @@ namespace ZipCrackNetCore
                 Console.WriteLine("Password: " + zct.Password); //Print out the password
                 Environment.Exit(0); //Exit the program
             }
-            else if(LengthToAssign > MaxLength) //The specified maximum password length as been exceeded without a password being found
-            {
-                Console.WriteLine("No Password found");
-                Environment.Exit(1);
-            }
-            else //Start a new Thread to try a longer password
+            else if(LengthToAssign <= MaxLength) //Start a new Thread to try a longer password
             {
                 CancellationTokenSource cts = new CancellationTokenSource();
                 zct = new ZipCrackThread(Charset.ToArray(), LengthToAssign, zct.Filename, cts.Token);
@@ -194,6 +189,11 @@ namespace ZipCrackNetCore
                 CancellationTokens.Add(cts);
                 t.Start();
                 LengthToAssign++;
+            }
+            else if(zct.CharCount == MaxLength) //Longest combination has finished testing, program is done
+            {
+                Console.WriteLine("No password has been found.");
+                Environment.Exit(1);
             }
         }
     }

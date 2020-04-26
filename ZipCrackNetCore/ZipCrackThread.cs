@@ -53,6 +53,16 @@ namespace ZipCrackNetCore
             }
         }
         /// <summary>
+        /// The Length of the Combination that is being tried
+        /// </summary>
+        public Int32 CharCount
+        {
+            get
+            {
+                return cl.StateStart.Length;
+            }
+        }
+        /// <summary>
         /// Creates a new ZipCrackThread-Object
         /// </summary>
         /// <param name="charset">The charset to combine into passwords</param>
