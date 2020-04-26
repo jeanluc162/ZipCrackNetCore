@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ZipCrackNetCore": {
+      "commandName": "Project",
+      "commandLineArgs": "D:\\ZipCrack\\tocrack.zip abcde 2 4"
+    }
+  }
+}
