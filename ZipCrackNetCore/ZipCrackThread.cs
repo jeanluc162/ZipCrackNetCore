@@ -78,12 +78,25 @@ namespace ZipCrackNetCore
         public void Bruteforce()
         {
             System.Diagnostics.Debug.WriteLine("Starting Bruteforce: " + Filename);
+            ZipFile zf = new ZipFile(_Filename);
+            ZipEntry ze;
+            if (zf.Entries.Count == 0)
+            {
+                Console.WriteLine("Zipfile has no entries, bruteforcing is Pointless!");
+                return;
+            }
+            using(var zfenum = zf.Entries.GetEnumerator())
+            {
+                zfenum.MoveNext();
+                ze = zfenum.Current;
+            }
 
+            Console.WriteLine("Thread for combination length '" + CharCount + "' started");
             do
             {
                 try
                 {
-                    if (ZipFile.CheckZipPassword(_Filename, cl.Loop())) //Check the Password against the File
+                    if (CheckZipPassword(ze, cl.Loop())) //Check the Password against the File
                     {
                         _Password = new String(cl.State);
                         break;
@@ -98,10 +111,39 @@ namespace ZipCrackNetCore
             if (_ct.IsCancellationRequested)
             {
                 System.Diagnostics.Debug.WriteLine(_Filename + ": Cancellation was requested.");
+                zf.Dispose();
+                Console.WriteLine("Thread for combination length '" + CharCount + "' has been canceled");
                 return;
-            }           
+            }
 
+            zf.Dispose();
+            Console.WriteLine("Thread for combination length '" + CharCount + "' has finished");
             Finished?.Invoke(this, new EventArgs()); //Invoke the "Finished" Event
+        }
+        /// <summary>
+        /// https://www.codeproject.com/Answers/397552/Validate-the-password-for-zip-file-using-DOTNETZIP
+        /// </summary>
+        /// <param name="zipentry"></param>
+        /// <param name="password"></param>
+        /// <returns></returns>
+        private Boolean CheckZipPassword(ZipEntry zipentry, String password)
+        {
+            try
+            {
+                using (var s = new PasswordCheckStream())
+                {
+                    zipentry.ExtractWithPassword(s, password);
+                }
+                return true;
+            }
+            catch (Ionic.Zip.BadPasswordException)
+            {
+                return false;
+            }
+            catch (PasswordCheckStream.GoodPasswordException)
+            {
+                return true;
+            }
         }
     }
 }
