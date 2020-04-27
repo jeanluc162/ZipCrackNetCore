@@ -4,7 +4,7 @@ A simple zip-password bruteforce utility written in C# using the .Net-Core Frame
 
 # How to use
 
-This program is a commandline-utility that needs four parameters.
+This program is a commandline-utility that needs four parameters:
 1. \[PATH\]: The Filepath of the ZIP-File to bruteforce. Examples: "C:\bruh.zip" or "/home/boringuser/jeff.zip"
 2. \[Charset-String\]: String Containing the characters to use. Example: "0123456789" to test numerical passwords
 3. \[MIN LENGTH\]: The shortest combination to test. Example: "2"
@@ -18,7 +18,7 @@ The programm will either tell you the password or inform you that no password ha
 
 # How it works
 
-1. The program figures out how many Threads to use. By default, the amount is equal to the amount of logical cores available. If amount of password lengths to test is smaller than the number of logical cores available, it is used instead.
+1. The program figures out how many Threads to use. By default, the amount is equal to the amount of logical cores available. If the amount of password lengths to test is smaller than the number of logical cores available, it is used instead (e.g. 8 Cores, Passwords with 5 to 8 characters -> 4 Threads).
 2. The program creates one copy of the ZIP-File for each thread in a temporary folder.
 3. The program starts the amount of Threads it wants to use (Shorter Combinations are tried before longer ones)
 4. When a thread finishes
