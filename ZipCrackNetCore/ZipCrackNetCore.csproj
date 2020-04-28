@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CharsetLooping\CharsetLooping.csproj" />
+    <ProjectReference Include="..\CombinationGenerator\CombinationGenerator.csproj" />
   </ItemGroup>
 
 </Project>
