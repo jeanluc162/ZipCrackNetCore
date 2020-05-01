@@ -52,6 +52,7 @@ namespace CombinationGenerator
 
                     String CurrState = "";
                     for (int i = 0; i < _Positions.Length; i++) CurrState += _Charset[_Positions[i]];
+                    System.Diagnostics.Debug.WriteLine("CombinationGenerator.Generator.Current: Returned String: " + CurrState);
                     return CurrState;
                 }
             }

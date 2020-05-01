@@ -17,17 +17,19 @@ namespace ZipCrackNetCore
         private static Int32 MinLength = 0;
         private static Int32 MaxLength = 0;
         private static String ZipPath = "";
+        private static Boolean OutputTries = false;
 
         /// <summary>
         /// Main Function
         /// </summary>
-        /// <param name="args">[PATH] [Charset-String] [MIN LENGHT] [MAX LENGTH]</param>
+        /// <param name="args">[PATH] [Charset-String] [MIN LENGHT] [MAX LENGTH] {output}</param>
         static void Main(string[] args)
         {
-            if(args.Length != 4) //All 4 Arguments are needed
+            if(args.Length < 4 || args.Length > 5) //4 Arguments are needed, 'output' is optional
             {
                 Console.WriteLine("Wrong use of arguments!");
-                Console.WriteLine("[PATH] [Charset-String] [MIN LENGTH] [MAX LENGTH]");
+                Console.WriteLine("[PATH] [Charset-String] [MIN LENGTH] [MAX LENGTH] {output}");
+                Console.WriteLine("Adding 'output' to the end of the command will print all tries to the console. This will slow down the program!");
                 Console.WriteLine("Example: C:\\bruh.zip ABCDEFGHIJKLMNOPQRSTUVWXYZ 5 8");
                 return;
             }
@@ -81,6 +83,11 @@ namespace ZipCrackNetCore
                 Console.WriteLine("[MAX LENGTH] is not a valid number!");
                 return;
             }
+            try
+            {
+                if (args[4].Trim().ToLower() == "output") OutputTries = true;
+            }
+            catch { }
 
             TempPath = Path.Combine(Path.GetTempPath(), "zipcracknetcore"); //Temporary Directory to use for the copied ZIPs
             System.Diagnostics.Debug.WriteLine("Temp Path: " + TempPath);
@@ -111,7 +118,7 @@ namespace ZipCrackNetCore
                 return;
             }
 
-            new Thread(() => GeneratorThread(MinLength, MaxLength, args[0])).Start();
+            new Thread(() => GeneratorThread(MinLength, MaxLength, args[1])).Start();
 
             for (int i = 0; i < ThreadCount; i++)
             {
@@ -161,21 +168,19 @@ namespace ZipCrackNetCore
                     String PasswordToTry;
                     if(Passwords.TryDequeue(out PasswordToTry))
                     {
+                        if(OutputTries) Console.WriteLine(PasswordToTry);
                         using (MemoryStream tmpms = new MemoryStream())
                         {
                             try
                             {
                                 ToTestAgainst.ExtractWithPassword(tmpms, PasswordToTry);
-                                Console.WriteLine("Found Password: " + ToTestAgainst);
+                                Console.WriteLine("Found Password: " + PasswordToTry);
                                 CancellationToken.Cancel();
                                 Thread.Sleep(10);
                                 Passwords.Clear();
+                                Environment.Exit(0);
                             }
-                            catch (Exception e)
-                            {
-                                System.Diagnostics.Debug.WriteLine(PasswordToTry);
-                                System.Diagnostics.Debug.WriteLine(e.Message);
-                            }
+                            catch { }
                         }
                     }
                     else

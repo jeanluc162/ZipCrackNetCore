@@ -2,7 +2,7 @@
   "profiles": {
     "ZipCrackNetCore": {
       "commandName": "Project",
-      "commandLineArgs": "D:\\ZipCrack\\tocrack.zip gabverf57 9 10"
+      "commandLineArgs": "D:\\ZipCrack\\tocrack.zip gvfre57 9 10 output"
     }
   }
 }

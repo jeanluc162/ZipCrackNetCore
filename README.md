@@ -9,20 +9,18 @@ This program is a commandline-utility that needs four parameters:
 2. \[Charset-String\]: String Containing the characters to use. Example: "0123456789" to test numerical passwords
 3. \[MIN LENGTH\]: The shortest combination to test. Example: "2"
 4. \[MAX LENGTH\]: The longest combination to test. Example: "8"
+5. {output}: Adding 'output' to the end of the command will display every password tried. This slows down execution!
 
 The parameters have to be supplied in the same order as specified above!
 
-Example usage: `dotnet ZipCrackNetCore.dll /home/myaccount/pron.zip abcdefghijklmnopqrstuvwxyz 5 8` would test passwords with 5 to 8 characters consisting of all lowercase letters against the file "pron.zip"
+Example usage: `dotnet ZipCrackNetCore.dll /home/myaccount/pron.zip abcdefghijklmnopqrstuvwxyz 5 8 output` would test passwords with 5 to 8 characters consisting of all lowercase letters against the file "pron.zip" and print all the tries.
 
-The programm will either tell you the password or inform you that no password has been found. Progress is not visualized.
+The programm will either tell you the password or inform you that no password has been found. Progress is not visualized unless {output} is used.
 
 # How it works
 
-1. The program figures out how many Threads to use. By default, the amount is equal to the amount of logical cores available. If the amount of password lengths to test is smaller than the number of logical cores available, it is used instead (e.g. 8 Cores, Passwords with 5 to 8 characters -> 4 Threads).
+1. The program figures out how many Threads to use. By default, the amount is equal to the amount of logical cores available times 1.5 plus one additional Thread for creating the combinations.
 2. The program creates one copy of the ZIP-File for each thread in a temporary folder.
-3. The program starts the amount of Threads it wants to use (Shorter Combinations are tried before longer ones)
-4. When a thread finishes
-   - A new thread is started if there are combinations left to try and no password has been found
-   - All threads are cancelled if a password has been found
-   - The program is done if the thread with the longest combination has finished
+3. The program starts the amount of Threads it wants to use.
+4. The program stops when a password is found or all combinations have been tried.
    
