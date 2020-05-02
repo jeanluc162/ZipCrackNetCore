@@ -19,7 +19,7 @@ The programm will either tell you the password or inform you that no password ha
 
 # How it works
 
-1. The program figures out how many Threads to use. By default, the amount is equal to the amount of logical cores available times 1.5 plus one additional Thread for creating the combinations.
+1. The program figures out how many Threads to use. By default, the amount is equal to the amount of logical cores available plus one additional Thread for creating the combinations and (optional) one for outputing the tried passwords to the console.
 2. The program creates one copy of the ZIP-File for each thread in a temporary folder.
 3. The program starts the amount of Threads it wants to use.
 4. The program stops when a password is found or all combinations have been tried.

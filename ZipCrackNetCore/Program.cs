@@ -10,14 +10,14 @@ namespace ZipCrackNetCore
 {
     internal class Program
     {
-        private static ConcurrentQueue<String> Passwords = new ConcurrentQueue<string>();
+        private static ConcurrentQueue<String> UnsuccessfullTries;
+        private static ConcurrentQueue<String> Passwords = new ConcurrentQueue<String>();
         private static CancellationTokenSource CancellationToken = new CancellationTokenSource();
         private static String TempPath = "";
-        private static Int32 ThreadCount = (Int32)(Environment.ProcessorCount * 1.3);
+        private static Int32 ThreadCount = Environment.ProcessorCount;
         private static Int32 MinLength = 0;
         private static Int32 MaxLength = 0;
         private static String ZipPath = "";
-        private static Boolean OutputTries = false;
 
         /// <summary>
         /// Main Function
@@ -85,7 +85,11 @@ namespace ZipCrackNetCore
             }
             try
             {
-                if (args[4].Trim().ToLower() == "output") OutputTries = true;
+                if (args[4].Trim().ToLower() == "output")
+                {
+                    UnsuccessfullTries = new ConcurrentQueue<String>();
+                    new Thread(() => OutputUnsuccessfullTries()).Start();
+                }
             }
             catch { }
 
@@ -155,6 +159,21 @@ namespace ZipCrackNetCore
                 }
             }
         }
+        private static void OutputUnsuccessfullTries()
+        {
+            String LastTry;
+            while (!CancellationToken.Token.IsCancellationRequested)
+            {
+                if(UnsuccessfullTries.TryDequeue(out LastTry))
+                {
+                    Console.WriteLine(LastTry);
+                }
+                else
+                {
+                    Thread.Sleep(5);
+                }
+            }
+        }
         private static void PasswordThread(String Filename)
         {
             using (ZipFile TestZip = ZipFile.Read(Filename))
@@ -168,16 +187,16 @@ namespace ZipCrackNetCore
                     String PasswordToTry;
                     if(Passwords.TryDequeue(out PasswordToTry))
                     {
-                        if(OutputTries) Console.WriteLine(PasswordToTry);
+                        UnsuccessfullTries?.Enqueue(PasswordToTry);
                         using (MemoryStream tmpms = new MemoryStream())
                         {
                             try
                             {
                                 ToTestAgainst.ExtractWithPassword(tmpms, PasswordToTry);
-                                Console.WriteLine("Found Password: " + PasswordToTry);
                                 CancellationToken.Cancel();
-                                Thread.Sleep(10);
                                 Passwords.Clear();
+                                UnsuccessfullTries?.Clear();                                
+                                Console.WriteLine("Found Password: " + PasswordToTry);
                                 Environment.Exit(0);
                             }
                             catch { }
@@ -185,7 +204,7 @@ namespace ZipCrackNetCore
                     }
                     else
                     {
-                        Thread.Sleep(2);
+                        Thread.Sleep(10);
                     }
                 }
             }
