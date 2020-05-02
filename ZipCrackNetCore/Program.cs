@@ -10,13 +10,37 @@ namespace ZipCrackNetCore
 {
     internal class Program
     {
-        private static ConcurrentQueue<String> UnsuccessfullTries;
+        /// <summary>
+        /// FIFO-List containing passwords that are tried/have been tried against the zip-file. Used for Console Output.
+        /// </summary>
+        private static ConcurrentQueue<String> PasswordTries;
+        /// <summary>
+        /// FIFO-List containg passwords that have yet to be tried against a zip-file.
+        /// </summary>
         private static ConcurrentQueue<String> Passwords = new ConcurrentQueue<String>();
+        /// <summary>
+        /// Tokensource for stopping the Threads
+        /// </summary>
         private static CancellationTokenSource CancellationToken = new CancellationTokenSource();
+        /// <summary>
+        /// Temporary path (used for creating copies of the Zip)
+        /// </summary>
         private static String TempPath = "";
+        /// <summary>
+        /// Thread count
+        /// </summary>
         private static Int32 ThreadCount = Environment.ProcessorCount;
+        /// <summary>
+        /// minimum password length
+        /// </summary>
         private static Int32 MinLength = 0;
+        /// <summary>
+        /// maximum password length
+        /// </summary>
         private static Int32 MaxLength = 0;
+        /// <summary>
+        /// Filepath of the zip-file to crack
+        /// </summary>
         private static String ZipPath = "";
 
         /// <summary>
@@ -85,10 +109,11 @@ namespace ZipCrackNetCore
             }
             try
             {
+                //Has the argument 'output' been provided?
                 if (args[4].Trim().ToLower() == "output")
                 {
-                    UnsuccessfullTries = new ConcurrentQueue<String>();
-                    new Thread(() => OutputUnsuccessfullTries()).Start();
+                    PasswordTries = new ConcurrentQueue<String>(); //Create Output Queue
+                    new Thread(() => OutputTries()).Start(); //Start Output Thread
                 }
             }
             catch { }
@@ -122,7 +147,7 @@ namespace ZipCrackNetCore
                 return;
             }
 
-            new Thread(() => GeneratorThread(MinLength, MaxLength, args[1])).Start();
+            new Thread(() => GeneratorThread(MinLength, MaxLength, args[1])).Start(); //Start Password Generator Thread
 
             for (int i = 0; i < ThreadCount; i++)
             {
@@ -131,7 +156,7 @@ namespace ZipCrackNetCore
                     String Filename = Path.Combine(TempPath, i.ToString() + ".zip");
                     File.Copy(ZipPath, Filename); //Generate a copy of the ZIP-File for each Thread
                     System.Diagnostics.Debug.WriteLine("Copied ZIP: " + Filename);
-                    new Thread(() => PasswordThread(Filename)).Start();                    
+                    new Thread(() => PasswordThread(Filename)).Start(); //Start Password Try Thread                    
                 }
                 catch
                 {
@@ -143,68 +168,86 @@ namespace ZipCrackNetCore
             Console.WriteLine("Press key to abort!");
             Console.ReadKey();
 
+            //User wanted to abort. Clear queues, cancel threads and exit.
+            PasswordTries?.Clear();
             Passwords.Clear();
             CancellationToken.Cancel();
+            Environment.Exit(0);
         }
+        /// <summary>
+        /// Fills the Password-Queue
+        /// </summary>
+        /// <param name="MinLength">Minimum Combination Length</param>
+        /// <param name="MaxLength">Maximum Combination Length</param>
+        /// <param name="Charset">Used Charset</param>
         private static void GeneratorThread(Int32 MinLength, Int32 MaxLength, String Charset)
         {
-            for(int i = MinLength; i <= MaxLength;i++)
+            for(int i = MinLength; i <= MaxLength;i++) //Loop through all required lengths
             {
-                Generator generator = new Generator(Charset, i);
+                Generator generator = new Generator(Charset, i); //Different Generator for each combination length
                 foreach(String password in generator)
                 {
-                    if (CancellationToken.Token.IsCancellationRequested) return;
-                    if (Passwords.Count < 10000) Passwords.Enqueue(password);
-                    else Thread.Sleep(10);
+                    if (CancellationToken.Token.IsCancellationRequested) return; //Check if Cancellation has been requested (meaning a valid password has been found)
+                    if (Passwords.Count < 10000) Passwords.Enqueue(password); //Add the new Password to the Queue if the Queue has less than 10k elements
+                    else Thread.Sleep(10); //Sleep for 10ms if the queue is large enough
                 }
             }
         }
-        private static void OutputUnsuccessfullTries()
+        /// <summary>
+        /// Outputs all tried combinations
+        /// </summary>
+        private static void OutputTries()
         {
             String LastTry;
-            while (!CancellationToken.Token.IsCancellationRequested)
+            while (!CancellationToken.Token.IsCancellationRequested) //Check if cancellation has been requested
             {
-                if(UnsuccessfullTries.TryDequeue(out LastTry))
+                if(PasswordTries.TryDequeue(out LastTry)) //Dequeue a tried password
                 {
-                    Console.WriteLine(LastTry);
+                    Console.WriteLine(LastTry); //Printout a Tried password
                 }
                 else
                 {
-                    Thread.Sleep(5);
+                    Thread.Sleep(5); //Wait for 5ms if there were no passwords to display
                 }
             }
         }
+        /// <summary>
+        /// Tries the passwords against a zip-file
+        /// </summary>
+        /// <param name="Filename">Filename of the zip-file</param>
         private static void PasswordThread(String Filename)
         {
-            using (ZipFile TestZip = ZipFile.Read(Filename))
+            using (ZipFile TestZip = ZipFile.Read(Filename)) //read the zip-file
             {
-                IEnumerator<ZipEntry> enumerator = TestZip.GetEnumerator();
-                enumerator.MoveNext();
+                IEnumerator<ZipEntry> enumerator = TestZip.GetEnumerator(); //Get an enumerator for the entries of the zip-file
+                enumerator.MoveNext(); //Move to the first entry
                 ZipEntry ToTestAgainst = enumerator.Current;
 
-                while(!CancellationToken.Token.IsCancellationRequested || !Passwords.IsEmpty)
+                while(!CancellationToken.Token.IsCancellationRequested || !Passwords.IsEmpty) //Check if Cancellation has been requested or all passwords have been tried
                 {
                     String PasswordToTry;
-                    if(Passwords.TryDequeue(out PasswordToTry))
+                    if(Passwords.TryDequeue(out PasswordToTry)) //Dequeue a password to try out
                     {
-                        UnsuccessfullTries?.Enqueue(PasswordToTry);
+                        PasswordTries?.Enqueue(PasswordToTry); //Queue password to output
                         using (MemoryStream tmpms = new MemoryStream())
                         {
                             try
                             {
-                                ToTestAgainst.ExtractWithPassword(tmpms, PasswordToTry);
-                                CancellationToken.Cancel();
-                                Passwords.Clear();
-                                UnsuccessfullTries?.Clear();                                
-                                Console.WriteLine("Found Password: " + PasswordToTry);
-                                Environment.Exit(0);
+                                ToTestAgainst.ExtractWithPassword(tmpms, PasswordToTry); //Try Extracting the first entry. Will throw an exception if the wrong password is used.
+                                
+                                //If we get here, no exception has been thrown meaning that the password was correct
+                                CancellationToken.Cancel(); //Request cancellation of all threads
+                                Passwords.Clear(); //Clear password queue
+                                PasswordTries?.Clear(); //Clear output queue                       
+                                Console.WriteLine("Found Password: " + PasswordToTry); //Output determined password
+                                Environment.Exit(0); //End the program
                             }
                             catch { }
                         }
                     }
                     else
                     {
-                        Thread.Sleep(10);
+                        Thread.Sleep(10); //Wait 10ms if no password could be dequeued
                     }
                 }
             }

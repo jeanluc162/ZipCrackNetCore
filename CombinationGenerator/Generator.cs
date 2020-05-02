@@ -4,19 +4,27 @@ using System.Collections.Generic;
 
 namespace CombinationGenerator
 {
+    /// <summary>
+    /// Enumerable collection of strings of a specified length made out of a specified charset
+    /// </summary>
     public class Generator : IEnumerable<String>
     {
         private Int32 _Length;
         private Char[] _Charset;
+        /// <summary>
+        /// Constructor for a Generator
+        /// </summary>
+        /// <param name="Charset">The charset used to create the strings</param>
+        /// <param name="Length">The length of the strings</param>
         public Generator(IEnumerable<Char> Charset, Int32 Length)
         {
-            if (Charset == null) throw new ArgumentNullException("Charset");
+            if (Charset == null) throw new ArgumentNullException("Charset"); //Charset can't be null
             List<Char> CharsetList = new List<Char>();
             foreach (Char c in Charset) CharsetList.Add(c);
-            if (CharsetList.Count < 1) throw new ArgumentException("'Charset' has to contain at least one Element", "Charset");
+            if (CharsetList.Count < 1) throw new ArgumentException("'Charset' has to contain at least one Element", "Charset"); //Charset can't be empty
             _Charset = CharsetList.ToArray();
             
-            if(Length < 1) throw new ArgumentException("'Length' has to be > 0", "Length");
+            if(Length < 1) throw new ArgumentException("'Length' has to be > 0", "Length"); //Strings can't be 0 characters long
             _Length = Length;
         }
         public IEnumerator<String> GetEnumerator()
@@ -28,18 +36,25 @@ namespace CombinationGenerator
         {
             return GetEnumerator();
         }
-
+        /// <summary>
+        /// Enumerator for a Generator
+        /// </summary>
         public class GeneratorEnumerator : IEnumerator<String>
         {
             private Int32[] _Positions;
             private Char[] _Charset;
+            /// <summary>
+            /// Constructor for a GeneratorEnumerator
+            /// </summary>
+            /// <param name="Charset">The charset used to create the strings</param>
+            /// <param name="Length">The length of the strings</param>
             public GeneratorEnumerator(Char[] Charset, Int32 Length)
             {
-                if (Charset == null) throw new ArgumentNullException("Charset");
-                if (Length < 1) throw new ArgumentException("'Length' has to be > 0", "Length");
+                if (Charset == null) throw new ArgumentNullException("Charset"); //Charset can't be null
+                if (Length < 1) throw new ArgumentException("'Length' has to be > 0", "Length"); //Strings can't be 0 characters long
                 _Positions = new Int32[Length];
 
-                if (Charset.Length < 1) throw new ArgumentException("'Charset' has to contain at least one Element", "Charset");
+                if (Charset.Length < 1) throw new ArgumentException("'Charset' has to contain at least one Element", "Charset"); //Charset can't be Empty
                 _Charset = Charset;
 
                 Reset();
