@@ -135,6 +135,7 @@ namespace ZipCrackNetCore
                     {
                         MemoryStream currentZipContents = new MemoryStream();
                         zipcontents.CopyTo(currentZipContents);
+                        currentZipContents.Position = 0;
                         new Thread(() => PasswordThread(currentZipContents)).Start(); //Start Password Try Thread                    
                     }
                     catch
