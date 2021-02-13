@@ -118,52 +118,35 @@ namespace ZipCrackNetCore
             }
             catch { }
 
-            TempPath = Path.Combine(Path.GetTempPath(), "zipcracknetcore"); //Temporary Directory to use for the copied ZIPs
-            System.Diagnostics.Debug.WriteLine("Temp Path: " + TempPath);
-            if (!Directory.Exists(TempPath))
-            {
-                try
-                {
-                    Directory.CreateDirectory(TempPath); //Generate the temporary directory if it does not exist
-                }
-                catch
-                {
-                    Console.WriteLine("Could not created Temporary Folder: " + TempPath);
-                    return;
-                }
-            }
-
-            try
-            {
-                foreach (FileInfo file in new DirectoryInfo(TempPath).EnumerateFiles()) //Delete existing files in the Temporary directory
-                {
-                    System.Diagnostics.Debug.WriteLine("Deleting File: " + file.FullName);
-                    file.Delete();
-                }
-            }
-            catch
-            {
-                Console.WriteLine("Unable to clear out Temporary Folder: " + TempPath);
-                return;
-            }
 
             new Thread(() => GeneratorThread(MinLength, MaxLength, args[1])).Start(); //Start Password Generator Thread
 
-            for (int i = 0; i < ThreadCount; i++)
+            using (MemoryStream zipcontents = new MemoryStream())
             {
-                try
+                using (FileStream fs = new FileStream(ZipPath, FileMode.Open))
                 {
-                    String Filename = Path.Combine(TempPath, i.ToString() + ".zip");
-                    File.Copy(ZipPath, Filename); //Generate a copy of the ZIP-File for each Thread
-                    System.Diagnostics.Debug.WriteLine("Copied ZIP: " + Filename);
-                    new Thread(() => PasswordThread(Filename)).Start(); //Start Password Try Thread                    
+                    fs.CopyTo(zipcontents);
                 }
-                catch
+
+                for (int i = 0; i < ThreadCount; i++)
                 {
-                    Console.WriteLine("Could not write into Temporary Folder: " + TempPath);
-                    return;
+                    zipcontents.Position = 0;
+                    try
+                    {
+                        MemoryStream currentZipContents = new MemoryStream();
+                        zipcontents.CopyTo(currentZipContents);
+                        new Thread(() => PasswordThread(currentZipContents)).Start(); //Start Password Try Thread                    
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Could not write into Temporary Folder: " + TempPath);
+                        return;
+                    }
                 }
             }
+            
+
+                
 
             Console.WriteLine("Press key to abort!");
             Console.ReadKey();
@@ -188,10 +171,11 @@ namespace ZipCrackNetCore
                 foreach(String password in generator)
                 {
                     if (CancellationToken.Token.IsCancellationRequested) return; //Check if Cancellation has been requested (meaning a valid password has been found)
-                    if (Passwords.Count < 10000) Passwords.Enqueue(password); //Add the new Password to the Queue if the Queue has less than 10k elements
-                    else Thread.Sleep(10); //Sleep for 10ms if the queue is large enough
+                    while (Passwords.Count > 100000) Thread.Sleep(10); //Waits till the Password Queue has less than 10k elements in it
+                    Passwords.Enqueue(password); //Add the new Password to the Queue if the Queue has less than 10k elements
                 }
             }
+            Console.WriteLine("Generator Thread finished work!");
         }
         /// <summary>
         /// Outputs all tried combinations
@@ -214,27 +198,29 @@ namespace ZipCrackNetCore
         /// <summary>
         /// Tries the passwords against a zip-file
         /// </summary>
-        /// <param name="Filename">Filename of the zip-file</param>
-        private static void PasswordThread(String Filename)
+        /// <param name="ZipStream">Filename of the zip-file</param>
+        private static void PasswordThread(MemoryStream ZipStream)
         {
-            using (ZipFile TestZip = ZipFile.Read(Filename)) //read the zip-file
+            using (ZipFile TestZip = ZipFile.Read(ZipStream)) //read the zip-file
             {
                 IEnumerator<ZipEntry> enumerator = TestZip.GetEnumerator(); //Get an enumerator for the entries of the zip-file
                 enumerator.MoveNext(); //Move to the first entry
                 ZipEntry ToTestAgainst = enumerator.Current;
+                String PasswordToTry;
 
-                while(!CancellationToken.Token.IsCancellationRequested || !Passwords.IsEmpty) //Check if Cancellation has been requested or all passwords have been tried
+                using (MemoryStream tmpms = new MemoryStream())
                 {
-                    String PasswordToTry;
-                    if(Passwords.TryDequeue(out PasswordToTry)) //Dequeue a password to try out
+                    while (!CancellationToken.Token.IsCancellationRequested || !Passwords.IsEmpty) //Check if Cancellation has been requested or all passwords have been tried
                     {
-                        PasswordTries?.Enqueue(PasswordToTry); //Queue password to output
-                        using (MemoryStream tmpms = new MemoryStream())
+                        tmpms.Position = 0;
+                        if (Passwords.TryDequeue(out PasswordToTry)) //Dequeue a password to try out
                         {
+                            PasswordTries?.Enqueue(PasswordToTry); //Queue password to output
+
                             try
                             {
                                 ToTestAgainst.ExtractWithPassword(tmpms, PasswordToTry); //Try Extracting the first entry. Will throw an exception if the wrong password is used.
-                                
+
                                 //If we get here, no exception has been thrown meaning that the password was correct
                                 CancellationToken.Cancel(); //Request cancellation of all threads
                                 Passwords.Clear(); //Clear password queue
@@ -244,12 +230,12 @@ namespace ZipCrackNetCore
                             }
                             catch { }
                         }
+                        else
+                        {
+                            Thread.Sleep(10); //Wait 10ms if no password could be dequeued
+                        }
                     }
-                    else
-                    {
-                        Thread.Sleep(10); //Wait 10ms if no password could be dequeued
-                    }
-                }
+                }                
             }
         }
     }
