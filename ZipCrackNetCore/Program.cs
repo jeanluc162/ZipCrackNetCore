@@ -1,4 +1,4 @@
-﻿using CombinationGenerator;
+﻿using ZipCrackNetCore.Library;
 using Ionic.Zip;
 using System;
 using System.Collections.Concurrent;

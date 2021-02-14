@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp3.1;net5.0</TargetFrameworks>
+    <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CombinationGenerator\CombinationGenerator.csproj" />
+    <ProjectReference Include="..\ZipCrackNetCore.Library\ZipCrackNetCore.Library.csproj" />
   </ItemGroup>
 
 </Project>

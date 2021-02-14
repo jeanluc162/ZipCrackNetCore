@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 
-namespace CombinationGenerator
+namespace ZipCrackNetCore.Library
 {
     /// <summary>
     /// Enumerable collection of strings of a specified length made out of a specified charset
