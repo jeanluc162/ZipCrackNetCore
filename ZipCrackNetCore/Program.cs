@@ -153,8 +153,6 @@ namespace ZipCrackNetCore
             Console.ReadKey();
 
             //User wanted to abort. Clear queues, cancel threads and exit.
-            PasswordTries?.Clear();
-            Passwords.Clear();
             CancellationToken.Cancel();
             Environment.Exit(0);
         }
@@ -223,9 +221,7 @@ namespace ZipCrackNetCore
                                 ToTestAgainst.ExtractWithPassword(tmpms, PasswordToTry); //Try Extracting the first entry. Will throw an exception if the wrong password is used.
 
                                 //If we get here, no exception has been thrown meaning that the password was correct
-                                CancellationToken.Cancel(); //Request cancellation of all threads
-                                Passwords.Clear(); //Clear password queue
-                                PasswordTries?.Clear(); //Clear output queue                       
+                                CancellationToken.Cancel(); //Request cancellation of all threads                    
                                 Console.WriteLine("Found Password: " + PasswordToTry); //Output determined password
                                 Environment.Exit(0); //End the program
                             }
